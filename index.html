@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>ক্লিনিং রোস্টার মেকার</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky top bar, editor column on the left, live A4 sheet on the right (stacked on phones). The sheet is paper and keeps its own fixed colours in both themes. */
+:root {
+  --bg: #f3f4f9;
+  --panel: #ffffff;
+  --fg: #1c2033;
+  --muted: #5d6479;
+  --line: #dcdfeb;
+  --field: #f7f8fc;
+  --accent: #2a47c4;
+  --accent-ink: #ffffff;
+  --accent-soft: #e4e9ff;
+  --amber: #b45309;
+  --danger: #b42318;
+  --ok: #067647;
+  --shadow: 0 1px 2px rgba(20, 28, 70, .08), 0 8px 28px rgba(20, 28, 70, .10);
+  /* paper tokens (same in both themes) */
+  --p-navy: #1e3a8a;
+  --p-blue: #3b5bdb;
+  --p-amber: #f59e0b;
+  --p-ink: #1f2937;
+  --p-line: #e5e7eb;
+  --p-zebra: #f3f6fc;
+  --font: "Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", "Shonar Bangla", "Mukti", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11131b; --panel: #1a1d29; --fg: #e8eaf4; --muted: #9aa1b8; --line: #2d3246;
+    --field: #141722; --accent: #8ea4ff; --accent-ink: #0e1330; --accent-soft: #252c52;
+    --amber: #f0b050; --danger: #ff8a7a; --ok: #5fd39a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11131b; --panel: #1a1d29; --fg: #e8eaf4; --muted: #9aa1b8; --line: #2d3246;
+  --field: #141722; --accent: #8ea4ff; --accent-ink: #0e1330; --accent-soft: #252c52;
+  --amber: #f0b050; --danger: #ff8a7a; --ok: #5fd39a;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 0 40px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 14px 12px; max-width: 1360px; margin-inline: auto; border-bottom: 1px solid var(--line); }
+.bar h1 { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -.005em; margin-right: auto; text-wrap: balance; }
+.bar h1 small { display: block; font-size: .8rem; font-weight: 400; color: var(--muted); }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: .92rem; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); padding-inline: 18px; }
+.btn.primary:disabled { opacity: .6; cursor: progress; }
+.btn.ghost { background: transparent; }
+.btn.warn { border-color: var(--danger); color: var(--danger); }
+.btn.small { padding: 4px 10px; font-size: .84rem; }
+
+/* page grid */
+.wrap { max-width: 1360px; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 18px; align-items: start; }
+@media (min-width: 1040px) { .wrap { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); } .preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); } }
+
+/* editor */
+.editor { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+.tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.pane { padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.group > h3 { margin: 0; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hint { margin: 0; font-size: .85rem; color: var(--muted); }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: .84rem; color: var(--muted); font-weight: 500; min-width: 0; }
+input[type="text"], select, textarea { width: 100%; min-width: 0; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--fg); }
+textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--accent); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.member { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: end; }
+.badge { align-self: end; background: var(--accent-soft); color: var(--accent); font-weight: 700; border-radius: 8px; padding: 7px 10px; font-variant-numeric: tabular-nums; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg label { text-align: center; padding: 7px 4px; cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--muted); border-left: 1px solid var(--line); }
+.seg label:first-child { border-left: 0; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--field); }
+.card > header { display: flex; align-items: center; gap: 8px; }
+.card > header input { font-weight: 600; }
+.rrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 6px; align-items: center; }
+.rrow select { padding: 6px 6px; font-size: .88rem; background: var(--panel); }
+.cap { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); margin-top: -2px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+.cap.bad { color: var(--danger); }
+.rrow:last-of-type .cap { border-bottom: 0; padding-bottom: 0; }
+.x { border: 0; background: transparent; color: var(--muted); cursor: pointer; width: 30px; height: 30px; border-radius: 6px; font-size: 1.1rem; line-height: 1; }
+.x:hover { background: var(--accent-soft); color: var(--danger); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rulerow, .noterow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--field); }
+.rulerow .fields, .noterow .fields { display: grid; gap: 6px; min-width: 0; }
+@media (max-width: 520px) { .rrow { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; } .rrow .x { grid-column: 3; grid-row: 1; } .rrow select:nth-child(1), .rrow select:nth-child(2) { grid-row: 1; } }
+
+/* preview */
+.preview { min-width: 0; }
+.pv-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+.pv-head h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+.pv-head span { font-size: .84rem; color: var(--muted); }
+.pv-warn { margin: 0 0 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--danger); color: var(--danger); font-size: .88rem; }
+.pv-box { width: 100%; overflow: hidden; border-radius: 6px; box-shadow: var(--shadow); background: #fff; }
+.pv-hold { width: 794px; transform-origin: 0 0; }
+
+/* the A4 sheet (all sizes in em so the fit step can scale the type) */
+.sheet { width: 794px; height: 1123px; background: #ffffff; color: var(--p-ink); padding: 34px 40px; overflow: hidden; font-family: var(--font); }
+.s-in { font-size: calc(var(--k, 1) * 15px); line-height: 1.35; }
+.s-hero { background: var(--p-navy); color: #ffffff; border-radius: .55em; padding: .55em .9em .6em; margin-bottom: .55em; }
+.s-hero h1 { margin: 0; font-size: 1.6em; font-weight: 700; line-height: 1.25; }
+.s-hero p { margin: .1em 0 0; font-size: .78em; color: #dbeafe; white-space: pre-wrap; }
+.s-in h2 { font-size: 1.08em; color: var(--p-navy); margin: .6em 0 .28em; padding-left: .5em; border-left: .26em solid var(--p-amber); font-weight: 700; line-height: 1.3; }
+.s-in table { width: 100%; border-collapse: collapse; }
+.s-in th { background: var(--p-navy); color: #ffffff; padding: .2em .5em; text-align: left; font-weight: 600; font-size: .86em; }
+.s-in td { padding: .17em .5em; border-bottom: 1px solid var(--p-line); font-size: .9em; }
+.s-in tr:nth-child(even) td { background: var(--p-zebra); }
+.s-in .nw { white-space: nowrap; }
+.s-names td, .s-names th { text-align: center; }
+.s-names td:first-child, .s-names th:first-child { text-align: left; font-weight: 600; }
+.s-names td { font-weight: 600; font-size: .95em; }
+.s-weeks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5em .65em; }
+.s-wk { font-size: .9em; font-weight: 700; color: #ffffff; background: var(--p-blue); padding: .1em .55em; border-radius: .3em .3em 0 0; }
+.s-weeks th { background: #e0e7ff; color: var(--p-navy); font-size: .8em; padding: .12em .4em; }
+.s-weeks td { padding: .12em .4em; font-size: .84em; }
+.tag { display: inline-block; padding: 0 .35em; border-radius: .25em; font-size: .92em; font-weight: 600; white-space: nowrap; }
+.t-din { background: #dbeafe; color: #1e40af; } .t-kit { background: #fef3c7; color: #92400e; } .t-bath { background: #dcfce7; color: #166534; }
+.s-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4em; margin-bottom: .3em; }
+.s-card { border: 1.5px solid #c7d2fe; border-radius: .5em; background: #f8faff; text-align: center; padding: .18em .2em .22em; min-width: 0; }
+.s-card .n { font-size: 1em; font-weight: 700; color: var(--p-navy); line-height: 1.25; overflow-wrap: anywhere; }
+.s-card .c { font-size: .66em; color: #6b7280; line-height: 1.1; }
+.s-card .tot { font-size: 1.35em; font-weight: 700; color: #b45309; line-height: 1.2; }
+.s-sum th, .s-sum td { text-align: center; }
+.s-sum th:first-child, .s-sum td:first-child { text-align: left; font-weight: 600; }
+.s-sum td { font-size: .86em; }
+.s-sum tr.tt td { background: #fef3c7; font-weight: 700; color: #92400e; border-top: 2px solid var(--p-amber); }
+.s-note { margin-top: .35em; font-size: .8em; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: .35em; padding: .15em .6em; }
+.s-note.w { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+.s-notes { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 1.1em; font-size: .82em; }
+.s-notes li { margin-bottom: .18em; break-inside: avoid; }
+.s-notes b { color: var(--p-navy); font-weight: 600; }
+.s-foot { text-align: center; font-size: .7em; color: #9ca3af; margin-top: .4em; }
+
+#toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: .9rem; max-width: calc(100vw - 32px); box-shadow: var(--shadow); z-index: 50; }
+@media (prefers-reduced-motion: no-preference) { #toast { transition: opacity .2s; } }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>ক্লিনিং রোস্টার মেকার <small>বাঁ দিকে বদলান, ডান দিকে A4 পেজ লাইভ দেখুন</small></h1>
+  <button class="btn ghost" id="reset" type="button">ডিফল্টে ফেরান</button>
+  <button class="btn primary" id="dl" type="button">PDF ডাউনলোড</button>
+</div>
+
+<div class="wrap">
+  <section class="editor" aria-label="এডিটর">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" id="tab-general" data-tab="general" type="button">সদস্য ও লেখা</button>
+      <button class="tab" role="tab" id="tab-roster" data-tab="roster" type="button">রোস্টার</button>
+      <button class="tab" role="tab" id="tab-rules" data-tab="rules" type="button">নিয়ম</button>
+      <button class="tab" role="tab" id="tab-notes" data-tab="notes" type="button">নির্দেশনা</button>
+    </div>
+    <div class="pane" id="pane" role="tabpanel"></div>
+  </section>
+
+  <section class="preview" aria-label="প্রিভিউ">
+    <div class="pv-head"><h2>PDF প্রিভিউ</h2><span>A4, ১ পেজ। লেখা বেশি হলে নিজে থেকে ছোট হবে।</span></div>
+    <p class="pv-warn" id="warn" hidden>কনটেন্ট এক পেজে ধরছে না। কিছু সারি বা নির্দেশনা কমান।</p>
+    <div class="pv-box" id="pvbox"><div class="pv-hold" id="pvhold"><div class="sheet" id="sheet"><div class="s-in" id="sin"></div></div></div></div>
+  </section>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var DIGITS = "০১২৩৪৫৬৭৮৯";
+  function bn(n) { return String(n).replace(/\d/g, function (d) { return DIGITS[d]; }); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var DAYS = ["শনিবার", "রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার"];
+  var ORD = ["প্রথম", "দ্বিতীয়", "তৃতীয়", "চতুর্থ", "পঞ্চম", "ষষ্ঠ", "সপ্তম", "অষ্টম"];
+  var KEY = "cleaning-roster-v1";
+  var PAGE_H = 1123, PAD_V = 34;
+
+  function R(day, t, a, b) { return { day: day, t: t, a: a, b: b }; }
+  function defaults() {
+    return {
+      title: "মাসিক ক্লিনিং রোস্টার",
+      sub: "ফ্ল্যাটের ৪ জন সদস্য: P1, P2, P3 ও P4  |  ২টি বেডরুম, ১টি ডাইনিং রুম, ১টি কিচেন, ১টি বাথরুম  |  নিজের বেডরুম নিজে পরিষ্কার করবে",
+      names: ["Maruf", "Siyam", "Sakib", "Arif"],
+      mode: "code",
+      areas: { din: "ডাইনিং রুম", kit: "কিচেন", bath: "বাথরুম" },
+      roles: { sweep: "ঝাড়ু", mop: "মোছা", commode: "কমোড", rest: "বাকি অংশ" },
+      rules: [
+        { a: "ডাইনিং রুম", f: "প্রতি ৩ দিন পরপর", d: "১ জন ঝাড়ু দেবে, অন্যজন মুছবে" },
+        { a: "কিচেন", f: "সপ্তাহে ১ দিন", d: "২ জন মিলে সম্পূর্ণ পরিষ্কার করবে" },
+        { a: "বাথরুম", f: "২ সপ্তাহে ১ দিন", d: "১ জন কমোড, অন্যজন বাকি অংশ পরিষ্কার করবে" }
+      ],
+      weeks: [
+        { title: "প্রথম সপ্তাহ", rows: [R("শুক্রবার", "din", 0, 1), R("শনিবার", "kit", 0, 2), R("সোমবার", "din", 2, 3), R("বৃহস্পতিবার", "din", 1, 0)] },
+        { title: "দ্বিতীয় সপ্তাহ", rows: [R("শুক্রবার", "bath", 1, 3), R("শনিবার", "kit", 1, 3), R("রবিবার", "din", 3, 2), R("বুধবার", "din", 0, 1)] },
+        { title: "তৃতীয় সপ্তাহ", rows: [R("শুক্রবার", "din", 2, 3), R("শনিবার", "kit", 0, 1), R("সোমবার", "din", 0, 2), R("বৃহস্পতিবার", "din", 3, 1)] },
+        { title: "চতুর্থ সপ্তাহ", rows: [R("শুক্রবার", "bath", 0, 2), R("শনিবার", "kit", 2, 3), R("রবিবার", "din", 1, 0), R("বুধবার", "din", 3, 2)] }
+      ],
+      notes: [
+        { h: "নিজের বেডরুম", t: "প্রত্যেকে নিজের রুম নিজে পরিষ্কার করবে।" },
+        { h: "ডাইনিং রুম", t: "একজন ঝাড়ু দেবে, অন্যজন মুছবে। পরবর্তীবার দায়িত্ব পরিবর্তন করার চেষ্টা করতে হবে, যাতে একই ব্যক্তি সব সময় একই কাজ না করে।" },
+        { h: "কিচেন", t: "নির্ধারিত দুইজন একসঙ্গে চুলা, সিঙ্ক, কাউন্টার, মেঝে এবং ডাস্টবিনের আশপাশ পরিষ্কার করবে।" },
+        { h: "বাথরুম", t: "একজন কমোড পরিষ্কার করবে, অন্যজন বেসিন, ট্যাপ, আয়না ও মেঝেসহ বাকি অংশ পরিষ্কার করবে। পরবর্তীবার দায়িত্ব অদলবদল করতে হবে।" },
+        { h: "নিজের ময়লা নিজে পরিষ্কার", t: "রান্না বা খাওয়ার পর নিজের বাসন ধুতে হবে এবং নিজের তৈরি করা ময়লা পরিষ্কার করতে হবে।" },
+        { h: "ডাস্টবিন", t: "ডাস্টবিন পূর্ণ হয়ে গেলে যে খেয়াল করবে, সে ফেলে আসবে।" },
+        { h: "ছুটির দিন", t: "সম্ভব হলে শুক্রবার ও শনিবারে বেশি কাজ রাখা হবে। কারও অসুবিধা হলে আগে থেকে অন্যজনের সঙ্গে দায়িত্ব পরিবর্তন করে নিতে হবে।" },
+        { h: "কাজ বাদ দেওয়া যাবে না", t: "নির্ধারিত দিনে কাজ করতে না পারলে অন্য দিনের সঙ্গে সমন্বয় করে কাজটি সম্পন্ন করতে হবে।" }
+      ],
+      foot: "🏠 মাসিক ক্লিনিং রোস্টার"
+    };
+  }
+
+  var S = load() || defaults();
+  var tab = "general";
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (o && Array.isArray(o.weeks) && Array.isArray(o.names) && o.names.length === 4 && o.areas && o.roles && Array.isArray(o.rules) && Array.isArray(o.notes)) return o;
+    } catch (e) {}
+    return null;
+  }
+  var saveTimer;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300);
+  }
+
+  /* ---------- derived values ---------- */
+  function lab(i) {
+    var code = "P" + (i + 1), nm = (S.names[i] || "").trim();
+    if (S.mode === "name") return nm || code;
+    if (S.mode === "both") return nm ? code + " (" + nm + ")" : code;
+    return code;
+  }
+  function duty(r) {
+    var A = lab(r.a), B = lab(r.b), ro = S.roles;
+    if (r.t === "din") return A + " " + ro.sweep + ", " + B + " " + ro.mop;
+    if (r.t === "kit") return A + " + " + B;
+    return A + " " + ro.commode + ", " + B + " " + ro.rest;
+  }
+  function stats() {
+    var s = [0, 1, 2, 3].map(function () { return { sw: 0, mp: 0, kit: 0, cm: 0, rs: 0 }; });
+    S.weeks.forEach(function (w) {
+      w.rows.forEach(function (r) {
+        var a = s[r.a], b = s[r.b];
+        if (!a || !b) return;
+        if (r.t === "din") { a.sw++; b.mp++; }
+        else if (r.t === "kit") { a.kit++; b.kit++; }
+        else { a.cm++; b.rs++; }
+      });
+    });
+    return s;
+  }
+  function badge(i) { return "P" + (i + 1); }
+
+  /* ---------- sheet ---------- */
+  function sheetHTML() {
+    var st = stats(), A = S.areas, RO = S.roles, n = 0;
+    function sec(t) { n++; return "<h2>" + bn(n) + ". " + esc(t) + "</h2>"; }
+    var h = "";
+    h += '<div class="s-hero"><h1>' + esc(S.title) + "</h1><p>" + esc(S.sub) + "</p></div>";
+
+    h += sec("সদস্য তালিকা");
+    h += '<table class="s-names"><tr><th>সদস্য</th>' + [0, 1, 2, 3].map(function (i) { return "<th>" + badge(i) + "</th>"; }).join("") + "</tr>";
+    h += "<tr><td>নাম</td>" + [0, 1, 2, 3].map(function (i) { return "<td>" + esc(S.names[i]) + "</td>"; }).join("") + "</tr></table>";
+
+    h += sec("পরিষ্কারের নিয়ম ও সময়সূচি");
+    h += '<table><tr><th style="width:19%">জায়গা</th><th style="width:23%">কতদিন পরপর</th><th>দায়িত্ব</th></tr>';
+    S.rules.forEach(function (r) { h += "<tr><td>" + esc(r.a) + "</td><td>" + esc(r.f) + "</td><td>" + esc(r.d) + "</td></tr>"; });
+    h += "</table>";
+
+    h += sec(bn(S.weeks.length) + " সপ্তাহের রোস্টার");
+    h += '<div class="s-weeks">';
+    S.weeks.forEach(function (w) {
+      h += "<div><div class=\"s-wk\">" + esc(w.title) + "</div><table><tr><th>দিন</th><th>কাজ</th><th>দায়িত্ব</th></tr>";
+      w.rows.forEach(function (r) {
+        h += '<tr><td class="nw">' + esc(r.day) + '</td><td><span class="tag t-' + r.t + '">' + esc(A[r.t]) + "</span></td><td>" + esc(duty(r)) + "</td></tr>";
+      });
+      h += "</table></div>";
+    });
+    h += "</div>";
+
+    h += sec("চারজনের কাজের হিসাব");
+    var tot = st.map(function (x) { return x.sw + x.mp + x.kit + x.cm + x.rs; });
+    h += '<div class="s-cards">' + st.map(function (x, i) {
+      return '<div class="s-card"><div class="n">' + esc((S.names[i] || "").trim() || badge(i)) + '</div><div class="c">' + badge(i) + '</div><div class="tot">' + bn(tot[i]) + "টি</div></div>";
+    }).join("") + "</div>";
+    h += '<table class="s-sum"><tr><th>সদস্য</th><th>' + esc(A.din + " " + RO.sweep) + "</th><th>" + esc(A.din + " " + RO.mop) + "</th><th>" + esc(A.din) + " মোট</th><th>" + esc(A.kit) + "</th><th>" + esc(A.bath) + "</th><th>সর্বমোট</th></tr>";
+    var sum = { sw: 0, mp: 0, d: 0, k: 0, b: 0, t: 0 };
+    st.forEach(function (x, i) {
+      var d = x.sw + x.mp, b = x.cm + x.rs, parts = [];
+      if (x.cm) parts.push(RO.commode + (x.cm > 1 ? " ×" + bn(x.cm) : ""));
+      if (x.rs) parts.push(RO.rest + (x.rs > 1 ? " ×" + bn(x.rs) : ""));
+      h += "<tr><td>" + badge(i) + " " + esc((S.names[i] || "").trim()) + "</td><td>" + bn(x.sw) + "</td><td>" + bn(x.mp) + "</td><td>" + bn(d) + "</td><td>" + bn(x.kit) + "</td><td>" + bn(b) + (parts.length ? " (" + esc(parts.join(", ")) + ")" : "") + "</td><td><b>" + bn(tot[i]) + "</b></td></tr>";
+      sum.sw += x.sw; sum.mp += x.mp; sum.d += d; sum.k += x.kit; sum.b += b; sum.t += tot[i];
+    });
+    h += '<tr class="tt"><td>মোট</td><td>' + bn(sum.sw) + "</td><td>" + bn(sum.mp) + "</td><td>" + bn(sum.d) + "</td><td>" + bn(sum.k) + "</td><td>" + bn(sum.b) + "</td><td>" + bn(sum.t) + "</td></tr></table>";
+
+    var same = function (f) { return st.every(function (x) { return f(x) === f(st[0]); }); };
+    var tEq = tot.every(function (v) { return v === tot[0]; });
+    if (tEq) {
+      var dd = function (x) { return x.sw + x.mp; }, bb = function (x) { return x.cm + x.rs; };
+      var det = same(dd) && same(function (x) { return x.kit; }) && same(bb)
+        ? ": প্রত্যেকে " + A.din + " " + bn(dd(st[0])) + " বার, " + A.kit + " " + bn(st[0].kit) + " বার ও " + A.bath + " " + bn(bb(st[0])) + " বার, মোট " + bn(tot[0]) + "টি করে কাজ।"
+        : ": প্রত্যেকে মোট " + bn(tot[0]) + "টি করে কাজ পাচ্ছে।";
+      h += '<div class="s-note">✅ সবাই সমান ভাগ পাচ্ছে' + esc(det) + "</div>";
+    } else {
+      var mx = Math.max.apply(null, tot), mn = Math.min.apply(null, tot);
+      var who = function (v) { return tot.map(function (x, i) { return x === v ? badge(i) : null; }).filter(Boolean).join(", "); };
+      h += '<div class="s-note w">⚠ ভাগ সমান নয়: সবচেয়ে বেশি ' + who(mx) + " (" + bn(mx) + "টি), সবচেয়ে কম " + who(mn) + " (" + bn(mn) + "টি)।</div>";
+    }
+
+    h += sec("সবার জন্য নির্দেশনা");
+    h += '<ul class="s-notes">' + S.notes.map(function (x, i) { return "<li><b>" + bn(i + 1) + ". " + esc(x.h) + ":</b> " + esc(x.t) + "</li>"; }).join("") + "</ul>";
+    h += '<div class="s-foot">' + esc(S.foot) + "</div>";
+    return h;
+  }
+
+  var warnEl = $("#warn");
+  function fit() {
+    var inn = $("#sin"), avail = PAGE_H - 2 * PAD_V - 4, lo = 0.4, hi = 1.12;
+    for (var i = 0; i < 14; i++) {
+      var mid = (lo + hi) / 2;
+      inn.style.setProperty("--k", mid.toFixed(4));
+      if (inn.offsetHeight <= avail) lo = mid; else hi = mid;
+    }
+    inn.style.setProperty("--k", lo.toFixed(4));
+    warnEl.hidden = !(inn.offsetHeight > avail || lo < 0.62);
+    if (!warnEl.hidden) warnEl.textContent = inn.offsetHeight > avail ? "কনটেন্ট এক পেজে ধরছে না। কিছু সারি বা নির্দেশনা কমান।" : "লেখা অনেক ছোট হয়ে গেছে। পড়তে সুবিধার জন্য কিছু সারি বা নির্দেশনা কমান।";
+  }
+  function scalePreview() {
+    var box = $("#pvbox"), hold = $("#pvhold"), k = Math.min(1, box.clientWidth / 794);
+    hold.style.transform = "scale(" + k + ")";
+    box.style.height = Math.round(PAGE_H * k) + "px";
+  }
+  function renderSheet() { $("#sin").innerHTML = sheetHTML(); fit(); scalePreview(); }
+  function update() { renderSheet(); refreshCaps(); save(); }
+
+  /* ---------- editor ---------- */
+  function idOf(b) { return "f-" + b.replace(/\./g, "-"); }
+  function inp(bind, val, label) {
+    return '<label class="f">' + (label ? esc(label) : "") + '<input type="text" id="' + idOf(bind) + '" data-bind="' + bind + '" value="' + esc(val) + '"></label>';
+  }
+  function area(bind, val, label) {
+    return '<label class="f">' + esc(label) + '<textarea id="' + idOf(bind) + '" data-bind="' + bind + '">' + esc(val) + "</textarea></label>";
+  }
+  function personOpts(sel) {
+    return [0, 1, 2, 3].map(function (i) { return '<option value="' + i + '"' + (i === sel ? " selected" : "") + ">" + badge(i) + " · " + esc(S.names[i]) + "</option>"; }).join("");
+  }
+  function paneGeneral() {
+    var h = '<div class="group"><h3>শিরোনাম</h3>' + inp("title", S.title, "পেজের নাম") + area("sub", S.sub, "নামের নিচের লাইন") + "</div>";
+    h += '<div class="group"><h3>সদস্যদের নাম</h3><p class="hint">P1 থেকে P4 কোড বসানো আছে। এখানে নাম বদলালে PDF-এর নামের টেবিল ও হিসাবে নাম বদলে যাবে।</p><div class="grid2">';
+    for (var i = 0; i < 4; i++) h += '<div class="member"><span class="badge">' + badge(i) + "</span>" + inp("names." + i, S.names[i], "নাম") + "</div>";
+    h += "</div></div>";
+    h += '<div class="group"><h3>রোস্টারে কীভাবে দেখাবে</h3><div class="seg" role="radiogroup" aria-label="রোস্টারে দেখানোর ধরন">';
+    [["code", "কোড (P1)"], ["name", "নাম"], ["both", "কোড + নাম"]].forEach(function (m) {
+      h += '<label><input type="radio" name="mode" id="f-mode-' + m[0] + '" data-bind="mode" value="' + m[0] + '"' + (S.mode === m[0] ? " checked" : "") + ">" + m[1] + "</label>";
+    });
+    h += "</div></div>";
+    h += '<div class="group"><h3>জায়গার নাম</h3><div class="grid2">' + inp("areas.din", S.areas.din, "ডাইনিং") + inp("areas.kit", S.areas.kit, "কিচেন") + inp("areas.bath", S.areas.bath, "বাথরুম") + "</div></div>";
+    h += '<div class="group"><h3>কাজের নাম</h3><div class="grid2">' + inp("roles.sweep", S.roles.sweep, "ডাইনিং: প্রথম জন") + inp("roles.mop", S.roles.mop, "ডাইনিং: দ্বিতীয় জন") + inp("roles.commode", S.roles.commode, "বাথরুম: প্রথম জন") + inp("roles.rest", S.roles.rest, "বাথরুম: দ্বিতীয় জন") + "</div></div>";
+    h += '<div class="group"><h3>পেজের নিচের লেখা</h3>' + inp("foot", S.foot, "ফুটার") + "</div>";
+    return h;
+  }
+  function paneRoster() {
+    var h = '<p class="hint">প্রতিটি সারিতে দিন, কাজের জায়গা ও দুইজন সদস্য বাছুন। হিসাব নিজে থেকে মিলে যাবে। ডাইনিং ও বাথরুমে প্রথম জন আর দ্বিতীয় জনের কাজ আলাদা, কিচেনে দুজনেরই একই কাজ।</p>';
+    S.weeks.forEach(function (w, wi) {
+      h += '<div class="card"><header>' + '<input type="text" id="f-weeks-' + wi + '-title" data-bind="weeks.' + wi + '.title" value="' + esc(w.title) + '" aria-label="সপ্তাহের নাম">' +
+        '<button type="button" class="x" data-act="delWeek" data-w="' + wi + '" aria-label="এই সপ্তাহ মুছুন" title="সপ্তাহ মুছুন">✕</button></header>';
+      w.rows.forEach(function (r, ri) {
+        var b = "weeks." + wi + ".rows." + ri;
+        h += '<div class="rrow">' +
+          '<select id="f-' + b.replace(/\./g, "-") + '-day" data-bind="' + b + '.day" aria-label="দিন">' + DAYS.map(function (d) { return "<option" + (d === r.day ? " selected" : "") + ">" + d + "</option>"; }).join("") + "</select>" +
+          '<select id="f-' + b.replace(/\./g, "-") + '-t" data-bind="' + b + '.t" aria-label="জায়গা">' + ["din", "kit", "bath"].map(function (k) { return '<option value="' + k + '"' + (k === r.t ? " selected" : "") + ">" + esc(S.areas[k]) + "</option>"; }).join("") + "</select>" +
+          '<select id="f-' + b.replace(/\./g, "-") + '-a" data-bind="' + b + '.a" data-num="1" aria-label="প্রথম জন">' + personOpts(r.a) + "</select>" +
+          '<select id="f-' + b.replace(/\./g, "-") + '-b" data-bind="' + b + '.b" data-num="1" aria-label="দ্বিতীয় জন">' + personOpts(r.b) + "</select>" +
+          '<button type="button" class="x" data-act="delRow" data-w="' + wi + '" data-r="' + ri + '" aria-label="এই সারি মুছুন" title="সারি মুছুন">✕</button>' +
+          '<div class="cap" data-cap="' + wi + "." + ri + '"></div></div>';
+      });
+      h += '<div class="actions"><button type="button" class="btn small" data-act="addRow" data-w="' + wi + '">+ সারি যোগ</button></div></div>';
+    });
+    h += '<div class="actions"><button type="button" class="btn" data-act="addWeek">+ নতুন সপ্তাহ</button></div>';
+    return h;
+  }
+  function paneRules() {
+    var h = '<p class="hint">এটা PDF-এর "পরিষ্কারের নিয়ম ও সময়সূচি" টেবিল।</p>';
+    S.rules.forEach(function (r, i) {
+      h += '<div class="rulerow"><div class="fields">' + inp("rules." + i + ".a", r.a, "জায়গা") + inp("rules." + i + ".f", r.f, "কতদিন পরপর") + inp("rules." + i + ".d", r.d, "দায়িত্ব") + '</div><button type="button" class="x" data-act="delRule" data-i="' + i + '" aria-label="এই নিয়ম মুছুন" title="মুছুন">✕</button></div>';
+    });
+    h += '<div class="actions"><button type="button" class="btn" data-act="addRule">+ নিয়ম যোগ</button></div>';
+    return h;
+  }
+  function paneNotes() {
+    var h = '<p class="hint">নম্বর নিজে থেকে বসবে। লম্বা লেখা বেশি হলে পুরো PDF একটু ছোট হয়ে যাবে।</p>';
+    S.notes.forEach(function (x, i) {
+      h += '<div class="noterow"><div class="fields">' + inp("notes." + i + ".h", x.h, "শিরোনাম") + area("notes." + i + ".t", x.t, "বিবরণ") + '</div><button type="button" class="x" data-act="delNote" data-i="' + i + '" aria-label="এই নির্দেশনা মুছুন" title="মুছুন">✕</button></div>';
+    });
+    h += '<div class="actions"><button type="button" class="btn" data-act="addNote">+ নির্দেশনা যোগ</button></div>';
+    return h;
+  }
+  function renderEditor() {
+    document.querySelectorAll(".tab").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+    $("#pane").setAttribute("aria-labelledby", "tab-" + tab);
+    $("#pane").innerHTML = { general: paneGeneral, roster: paneRoster, rules: paneRules, notes: paneNotes }[tab]();
+    refreshCaps();
+  }
+  function refreshCaps() {
+    document.querySelectorAll("[data-cap]").forEach(function (el) {
+      var p = el.dataset.cap.split("."), r = S.weeks[p[0]] && S.weeks[p[0]].rows[p[1]];
+      if (!r) return;
+      var bad = r.a === r.b;
+      el.classList.toggle("bad", bad);
+      el.textContent = duty(r) + (bad ? "  (একই জনকে দুইবার বসানো হয়েছে)" : "");
+    });
+  }
+  function setPath(path, val) {
+    var k = path.split("."), o = S;
+    for (var i = 0; i < k.length - 1; i++) o = o[k[i]];
+    o[k[k.length - 1]] = val;
+  }
+
+  var pane = $("#pane");
+  pane.addEventListener("input", function (e) {
+    var t = e.target;
+    if (!t.dataset || !t.dataset.bind || t.type === "radio") return;
+    setPath(t.dataset.bind, t.dataset.num !== undefined ? +t.value : t.value);
+    update();
+  });
+  pane.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.type === "radio" && t.checked) { S.mode = t.value; update(); }
+  });
+  pane.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]");
+    if (!b) return;
+    var a = b.dataset.act, w = +b.dataset.w, r = +b.dataset.r, i = +b.dataset.i;
+    if (a === "addRow") S.weeks[w].rows.push(R("শুক্রবার", "din", 0, 1));
+    else if (a === "delRow") S.weeks[w].rows.splice(r, 1);
+    else if (a === "addWeek") { var n = S.weeks.length; S.weeks.push({ title: (ORD[n] || bn(n + 1) + "তম") + " সপ্তাহ", rows: [R("শুক্রবার", "din", 0, 1)] }); }
+    else if (a === "delWeek") S.weeks.splice(w, 1);
+    else if (a === "addRule") S.rules.push({ a: "", f: "", d: "" });
+    else if (a === "delRule") S.rules.splice(i, 1);
+    else if (a === "addNote") S.notes.push({ h: "", t: "" });
+    else if (a === "delNote") S.notes.splice(i, 1);
+    renderEditor();
+    update();
+  });
+  $("#tabs").addEventListener("click", function (e) {
+    var b = e.target.closest(".tab");
+    if (!b) return;
+    tab = b.dataset.tab;
+    renderEditor();
+  });
+
+  /* ---------- reset ---------- */
+  var resetEl = $("#reset"), resetT;
+  resetEl.addEventListener("click", function () {
+    if (!resetEl.dataset.armed) {
+      resetEl.dataset.armed = "1";
+      resetEl.textContent = "নিশ্চিত? আবার চাপুন";
+      resetEl.classList.add("warn");
+      resetT = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    S = defaults();
+    renderEditor();
+    update();
+    toast("ডিফল্ট রোস্টার ফিরে এসেছে।");
+  });
+  function disarm() {
+    clearTimeout(resetT);
+    delete resetEl.dataset.armed;
+    resetEl.textContent = "ডিফল্টে ফেরান";
+    resetEl.classList.remove("warn");
+  }
+
+  /* ---------- toast ---------- */
+  var toastEl = $("#toast"), toastT;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.hidden = true; }, 3800);
+  }
+
+  /* ---------- PDF ---------- */
+  var downloads = null, dlBtn = $("#dl");
+  if (window.claude && window.claude.use) {
+    window.claude.use("downloads").then(function (d) { downloads = d; }, function () { downloads = null; });
+  }
+  dlBtn.addEventListener("click", async function () {
+    if (dlBtn.disabled) return;
+    if (typeof html2canvas === "undefined" || !(window.jspdf && window.jspdf.jsPDF)) { toast("PDF লাইব্রেরি লোড হয়নি। ইন্টারনেট দেখে পেজ রিলোড করুন।"); return; }
+    dlBtn.disabled = true;
+    var label = dlBtn.textContent;
+    dlBtn.textContent = "PDF বানানো হচ্ছে…";
+    var clone;
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      fit();
+      clone = $("#sheet").cloneNode(true);
+      clone.id = "cap-root";
+      clone.style.cssText = "position:absolute;left:-10000px;top:0;transform:none;";
+      document.body.appendChild(clone);
+      var canvas = await html2canvas(clone, {
+        scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false,
+        width: 794, height: PAGE_H, windowWidth: 794, windowHeight: PAGE_H, scrollX: 0, scrollY: 0,
+        onclone: function (doc) {
+          var el = doc.getElementById("cap-root");
+          if (el) { el.style.left = "0"; el.style.top = "0"; }
+        }
+      });
+      var pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+      var blob = pdf.output("blob");
+      if (downloads) {
+        await downloads.save({ filename: "Cleaning_Roster.pdf", data: blob });
+      } else {
+        var url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = "Cleaning_Roster.pdf";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+      }
+      toast("PDF সেভ হয়েছে।");
+    } catch (err) {
+      var c = err && err.code;
+      if (c === "declined") toast("ডাউনলোড বাতিল করা হয়েছে।");
+      else if (c === "rate_limited") toast("একটু পরে আবার চেষ্টা করুন।");
+      else toast("PDF বানাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } finally {
+      if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
+      dlBtn.disabled = false;
+      dlBtn.textContent = label;
+    }
+  });
+
+  /* ---------- boot ---------- */
+  renderEditor();
+  renderSheet();
+  window.addEventListener("resize", scalePreview);
+  if (window.ResizeObserver) new ResizeObserver(scalePreview).observe($("#pvbox"));
+  if (document.fonts) {
+    document.fonts.ready.then(function () { renderSheet(); });
+    document.fonts.addEventListener && document.fonts.addEventListener("loadingdone", function () { fit(); });
+  }
+})();
+</script>
+</body>
+</html>
